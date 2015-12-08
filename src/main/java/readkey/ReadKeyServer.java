@@ -14,9 +14,11 @@ import readkey.keywords.EnglishKeywordProcessor;
 import readkey.keywords.KeywordProcessor;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.List;
 
 import static java.util.stream.Collectors.toList;
+import static spark.Spark.port;
 import static spark.Spark.post;
 
 public class ReadKeyServer {
@@ -36,6 +38,19 @@ public class ReadKeyServer {
   }
 
   public static void main(String[] args) {
+
+    // Read port number if possible.
+    int portNumber = 4567;
+    if (args.length > 0) {
+      try {
+        portNumber = Integer.parseInt(args[0]);
+      } catch (NumberFormatException e) {
+        e.printStackTrace();
+        System.exit(1);
+      }
+    }
+    port(portNumber);
+
     post("/keywords", "application/json", (request, response) -> {
       String lang = request.queryParams("lang"),
               content = request.queryParams("text");
@@ -71,7 +86,6 @@ public class ReadKeyServer {
         Optional<LdLocale> detectedLanguage = languageDetector
                 .detect(textObjectFactory.forText(optionalContent.get()));
         if (detectedLanguage.isPresent()) {
-          System.out.println(detectedLanguage.get().getLanguage());
           return getKeywordsProcessor(detectedLanguage.get().getLanguage(), Optional.absent());
         } else {
           // Cannot detect languages.

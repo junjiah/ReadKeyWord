@@ -6,7 +6,7 @@ import org.python.core.PyString;
 import org.python.core.PyTuple;
 import org.python.util.PythonInterpreter;
 
-import java.net.URL;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,17 +17,17 @@ public class EnglishKeywordProcessor implements KeywordProcessor {
   private PyObject rakeRunner;
 
   private EnglishKeywordProcessor() {
-    ClassLoader loader = EnglishKeywordProcessor.class.getClassLoader();
-    URL r = loader.getResource("RAKE");
-
     PythonInterpreter interpreter = new PythonInterpreter();
     StringBuffer initJythonCommand = new StringBuffer();
     // Import.
     initJythonCommand.append("import sys\n");
-    initJythonCommand.append("sys.path.append('" + r.getPath() + "')\n");
+
+    String rakePath = getRakePath();
+
+    initJythonCommand.append("sys.path.append('" + rakePath + "')\n");
     initJythonCommand.append("from rake import Rake\n");
     // Build RAKE object.
-    initJythonCommand.append("r = Rake('" + r.getPath() + "/SmartStoplist.txt')\n");
+    initJythonCommand.append("r = Rake('" + rakePath + "/SmartStoplist.txt')\n");
 
     interpreter.exec(initJythonCommand.toString());
 
@@ -41,6 +41,16 @@ public class EnglishKeywordProcessor implements KeywordProcessor {
     return instance;
   }
 
+  private String getRakePath() {
+    try {
+      // First try to get RAKE from the same directory as the executable.
+      return EnglishKeywordProcessor.class.getProtectionDomain().getCodeSource()
+              .getLocation().toURI().resolve("./RAKE").getPath();
+    } catch (URISyntaxException e) {
+      // As a fallback, try to get RAKE as the resource.
+      return EnglishKeywordProcessor.class.getClassLoader().getResource("RAKE").getPath();
+    }
+  }
 
   @Override
   public List<String> extract(String text, int keywordSize) {
